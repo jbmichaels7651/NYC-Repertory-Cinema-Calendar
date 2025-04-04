@@ -1,89 +1,55 @@
 'use client';
+import { useEffect, useState } from 'react';
 
-import { useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
+export default function Page() {
+  const [showtimes, setShowtimes] = useState([]);
+  const [error, setError] = useState(null);
 
-const currentYear = new Date().getFullYear();
-const excludedYears = [currentYear, currentYear - 1];
+  useEffect(() => {
+    async function loadShowtimes() {
+      try {
+        const res = await fetch('/api/showtimes');
+        if (!res.ok) throw new Error('Failed to fetch showtimes');
+        const data = await res.json();
+        setShowtimes(data.showtimes || []);
+      } catch (err) {
+        console.error(err);
+        setError('Could not load showtimes.');
+      }
+    }
 
-const events = [
-  {
-    title: "Tokyo Story (1953) @ Metrograph",
-    date: "2025-03-29",
-    theater: "Metrograph",
-    year: 1953
-  },
-  {
-    title: "Blue Velvet (1986) @ IFC Center",
-    date: "2025-03-29",
-    theater: "IFC Center",
-    year: 1986
-  },
-  {
-    title: "Persona (1966) @ Film Forum",
-    date: "2025-03-30",
-    theater: "Film Forum",
-    year: 1966
-  },
-  {
-    title: "Aguirre (1972) @ Roxy Cinema",
-    date: "2025-03-30",
-    theater: "Roxy Cinema",
-    year: 1972
-  },
-  {
-    title: "Battleship Potemkin (1925) @ Museum of the Moving Image",
-    date: "2025-03-30",
-    theater: "Museum of the Moving Image",
-    year: 1925
-  },
-  {
-    title: "Barbenheimer (2025) @ Nitehawk",
-    date: "2025-03-30",
-    theater: "Nitehawk",
-    year: 2025
-  }
-];
-
-export default function Home() {
-  const [selectedTheater, setSelectedTheater] = useState("All");
-
-  const filteredEvents =
-    selectedTheater === "All"
-      ? events.filter(e => !excludedYears.includes(e.year))
-      : events.filter(
-          e => e.theater === selectedTheater && !excludedYears.includes(e.year)
-        );
+    loadShowtimes();
+  }, []);
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "900px", margin: "auto" }}>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", marginBottom: "1rem" }}>
-        NYC Repertory Cinema Calendar
-      </h1>
-      <label htmlFor="theater">Filter by Theater:</label>
-      <select
-        id="theater"
-        onChange={e => setSelectedTheater(e.target.value)}
-        value={selectedTheater}
-        style={{ margin: "0 0 1rem 1rem", padding: "0.5rem" }}
-      >
-        <option value="All">All</option>
-        <option value="Metrograph">Metrograph</option>
-        <option value="IFC Center">IFC Center</option>
-        <option value="Film Forum">Film Forum</option>
-        <option value="Roxy Cinema">Roxy Cinema</option>
-        <option value="Museum of the Moving Image">Museum of the Moving Image</option>
-        <option value="Nitehawk">Nitehawk</option>
-      </select>
+    <main className="p-6">
+      <h1 className="text-2xl font-bold mb-4">NYC Showtimes</h1>
 
-      <FullCalendar
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        events={filteredEvents}
-        height="auto"
-      />
-    </div>
+      {error && <p className="text-red-500">{error}</p>}
+
+      {showtimes.length === 0 && !error ? (
+        <p>Loading showtimes...</p>
+      ) : (
+        <ul className="space-y-4">
+          {showtimes.map((show, index) => (
+            <li key={index} className="p-4 border rounded-xl shadow">
+              <p className="font-semibold">
+                {new Date(show.start_at).toLocaleString()}
+              </p>
+              <p>Theater ID: {show.cinema_id}</p>
+              {show.booking_link && (
+                <a
+                  href={show.booking_link}
+                  target="_blank"
+                  className="text-blue-600 underline"
+                >
+                  Book now
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
   );
 }
