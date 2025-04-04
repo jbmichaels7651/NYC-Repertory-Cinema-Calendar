@@ -12,8 +12,9 @@ export async function GET() {
     time_from: `${today}T00:00:00`,
     time_to: `${today}T23:59:59`,
     countries: 'US',
-    radius: '15', // 15km radius around NYC
+    radius: '15',
     limit: '50',
+    expand: 'movie,cinema',
   });
 
   try {
@@ -30,4 +31,3 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch showtimes' }, { status: 500 });
   }
 }
-
