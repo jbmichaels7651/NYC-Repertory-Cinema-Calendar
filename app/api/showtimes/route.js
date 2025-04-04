@@ -5,7 +5,7 @@ export async function GET() {
   const today = new Date();
   const fromDate = today.toISOString().split('T')[0];
   const toDate = new Date(today);
-  toDate.setDate(toDate.getDate() + 5);
+  toDate.setDate(toDate.getDate() + 14);
   const toDateStr = toDate.toISOString().split('T')[0];
 
   const baseUrl = 'https://api.internationalshowtimes.com/v4';
