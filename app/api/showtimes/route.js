@@ -5,33 +5,35 @@ export async function GET() {
   const today = new Date();
   const fromDate = today.toISOString().split('T')[0];
   const toDate = new Date(today);
-  toDate.setDate(toDate.getDate() + 3); // 3-day range
+  toDate.setDate(toDate.getDate() + 5); // pull next 5 days
   const toDateStr = toDate.toISOString().split('T')[0];
 
   const baseUrl = 'https://api.internationalshowtimes.com/v4';
   const headers = { 'X-API-Key': apiKey };
 
-  const params = new URLSearchParams({
-    lat: '40.7128',
-    lon: '-74.0060',
-    radius: '25',
-    countries: 'US',
-    time_from: `${fromDate}T00:00:00`,
-    time_to: `${toDateStr}T23:59:59`,
-    limit: '100', // you can raise this later if it works
-  });
+  const cinemaIds = [
+    '41515', // Film Forum
+    '41517', // IFC Center
+    '65959', // Museum of the Moving Image
+    '65751', // Metrograph
+    '65747', // Roxy Cinema
+    '41518', // Anthology Film Archives
+  ];
 
   try {
-    const showRes = await fetch(`${baseUrl}/showtimes?${params.toString()}`, { headers });
+    const showRes = await fetch(
+      `${baseUrl}/showtimes?cinema_id=${cinemaIds.join(',')}&time_from=${fromDate}T00:00:00&time_to=${toDateStr}T23:59:59&limit=100`,
+      { headers }
+    );
     const { showtimes } = await showRes.json();
 
     const validShowtimes = showtimes.filter(s => s.movie_id && s.cinema_id);
-    const movieIds = [...new Set(validShowtimes.map(s => s.movie_id))].slice(0, 50);
-    const cinemaIds = [...new Set(validShowtimes.map(s => s.cinema_id))].slice(0, 20);
+    const movieIds = [...new Set(validShowtimes.map(s => s.movie_id))];
+    const uniqueCinemaIds = [...new Set(validShowtimes.map(s => s.cinema_id))];
 
     const [moviesRes, cinemasRes] = await Promise.all([
       fetch(`${baseUrl}/movies?ids=${movieIds.join(',')}`, { headers }),
-      fetch(`${baseUrl}/cinemas?ids=${cinemaIds.join(',')}`, { headers }),
+      fetch(`${baseUrl}/cinemas?ids=${uniqueCinemaIds.join(',')}`, { headers }),
     ]);
 
     const { movies } = await moviesRes.json();
