@@ -4,7 +4,7 @@ export async function GET() {
   const apiKey = process.env.SHOWTIMES_API_KEY;
   const today = new Date().toISOString().split('T')[0];
 
-  const url = 'https://api.internationalshowtimes.com/v4/showtimes';
+  const baseUrl = 'https://api.internationalshowtimes.com/v4';
 
   const params = new URLSearchParams({
     lat: '40.7128',
@@ -14,20 +14,42 @@ export async function GET() {
     countries: 'US',
     radius: '15',
     limit: '50',
-    expand: 'movie,cinema',
   });
 
-  try {
-    const res = await fetch(`${url}?${params.toString()}`, {
-      headers: {
-        'X-API-Key': apiKey,
-      },
-    });
+  const headers = {
+    'X-API-Key': apiKey,
+  };
 
-    const data = await res.json();
-    return NextResponse.json(data);
+  try {
+    // Step 1: Get showtimes
+    const showRes = await fetch(`${baseUrl}/showtimes?${params.toString()}`, { headers });
+    const { showtimes } = await showRes.json();
+
+    // Step 2: Get movie and cinema details
+    const movieIds = [...new Set(showtimes.map(s => s.movie_id).filter(Boolean))];
+    const cinemaIds = [...new Set(showtimes.map(s => s.cinema_id).filter(Boolean))];
+
+    const [moviesRes, cinemasRes] = await Promise.all([
+      fetch(`${baseUrl}/movies?ids=${movieIds.join(',')}`, { headers }),
+      fetch(`${baseUrl}/cinemas?ids=${cinemaIds.join(',')}`, { headers }),
+    ]);
+
+    const { movies } = await moviesRes.json();
+    const { cinemas } = await cinemasRes.json();
+
+    const movieMap = Object.fromEntries(movies.map(m => [m.id, m.title]));
+    const cinemaMap = Object.fromEntries(cinemas.map(c => [c.id, c.name]));
+
+    // Step 3: Merge data into showtimes
+    const merged = showtimes.map(s => ({
+      ...s,
+      movie_title: movieMap[s.movie_id] || 'Unknown Movie',
+      cinema_name: cinemaMap[s.cinema_id] || 'Unknown Theater',
+    }));
+
+    return NextResponse.json({ showtimes: merged });
   } catch (error) {
-    console.error('❌ Error fetching showtimes:', error);
-    return NextResponse.json({ error: 'Failed to fetch showtimes' }, { status: 500 });
+    console.error('❌ Error merging showtimes:', error);
+    return NextResponse.json({ error: 'Failed to load showtimes' }, { status: 500 });
   }
 }
