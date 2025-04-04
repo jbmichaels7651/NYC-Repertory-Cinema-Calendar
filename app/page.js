@@ -33,17 +33,18 @@ export default function Page() {
         <ul className="space-y-4">
           {showtimes.map((show, index) => (
             <li key={index} className="p-4 border rounded-xl shadow">
-              <p className="font-semibold">
-                {new Date(show.start_at).toLocaleString()}
-              </p>
-              <p>Theater ID: {show.cinema_id}</p>
+              <h2 className="text-lg font-semibold">
+                🎬 {show.movie_title || 'Unknown Movie'}
+              </h2>
+              <p>📍 {show.cinema_name || 'Unknown Theater'}</p>
+              <p>🕒 {new Date(show.start_at).toLocaleString()}</p>
               {show.booking_link && (
                 <a
                   href={show.booking_link}
                   target="_blank"
                   className="text-blue-600 underline"
                 >
-                  Book now
+                  🎟 Book tickets
                 </a>
               )}
             </li>
@@ -53,3 +54,4 @@ export default function Page() {
     </main>
   );
 }
+
