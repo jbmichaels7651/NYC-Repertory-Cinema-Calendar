@@ -5,7 +5,7 @@ export async function GET() {
   const today = new Date();
   const fromDate = today.toISOString().split('T')[0];
   const toDate = new Date(today);
-  toDate.setDate(toDate.getDate() + 5); // pull next 5 days
+  toDate.setDate(toDate.getDate() + 5);
   const toDateStr = toDate.toISOString().split('T')[0];
 
   const baseUrl = 'https://api.internationalshowtimes.com/v4';
@@ -25,10 +25,14 @@ export async function GET() {
       `${baseUrl}/showtimes?cinema_id=${cinemaIds.join(',')}&time_from=${fromDate}T00:00:00&time_to=${toDateStr}T23:59:59&limit=100`,
       { headers }
     );
-    const { showtimes } = await showRes.json();
 
+    const showData = await showRes.json();
+    console.log('✅ Showtimes response:', showData);
+
+    const showtimes = showData.showtimes || [];
     const validShowtimes = showtimes.filter(s => s.movie_id && s.cinema_id);
-    const movieIds = [...new Set(validShowtimes.map(s => s.movie_id))];
+
+    const movieIds = [...new Set(validShowtimes.map(s => s.movie_id))].slice(0, 50);
     const uniqueCinemaIds = [...new Set(validShowtimes.map(s => s.cinema_id))];
 
     const [moviesRes, cinemasRes] = await Promise.all([
@@ -36,11 +40,14 @@ export async function GET() {
       fetch(`${baseUrl}/cinemas?ids=${uniqueCinemaIds.join(',')}`, { headers }),
     ]);
 
-    const { movies } = await moviesRes.json();
-    const { cinemas } = await cinemasRes.json();
+    const moviesData = await moviesRes.json();
+    const cinemasData = await cinemasRes.json();
 
-    const movieMap = Object.fromEntries(movies.map(m => [m.id, m.title]));
-    const cinemaMap = Object.fromEntries(cinemas.map(c => [c.id, c.name]));
+    console.log('✅ Movies:', moviesData);
+    console.log('✅ Cinemas:', cinemasData);
+
+    const movieMap = Object.fromEntries((moviesData.movies || []).map(m => [m.id, m.title]));
+    const cinemaMap = Object.fromEntries((cinemasData.cinemas || []).map(c => [c.id, c.name]));
 
     const merged = validShowtimes.map(s => ({
       ...s,
@@ -50,8 +57,7 @@ export async function GET() {
 
     return NextResponse.json({ showtimes: merged });
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error during showtime fetch:', error);
     return NextResponse.json({ error: 'Failed to fetch showtimes' }, { status: 500 });
   }
 }
-
